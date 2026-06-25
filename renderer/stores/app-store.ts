@@ -11,6 +11,8 @@ interface AppState {
   activeBuildId: string | null;
   isDeepWork: boolean;
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
+  selectedStepId: string | null;
+  stepAssignees: Record<string, string[]>;
 
   setBuilds: (builds: Build[]) => void;
   setPhases: (buildId: string, phases: Phase[]) => void;
@@ -19,6 +21,19 @@ interface AppState {
   setActiveBuild: (id: string | null) => void;
   setDeepWork: (on: boolean) => void;
   setSyncStatus: (status: AppState['syncStatus']) => void;
+
+  addBuild: (build: Build) => void;
+  removeBuild: (id: string) => void;
+  addPhase: (phase: Phase) => void;
+  removePhase: (id: string) => void;
+  addStep: (step: Step) => void;
+  updateStep: (id: string, changes: Partial<Step>) => void;
+  removeStep: (id: string) => void;
+  moveStep: (stepId: string, fromPhaseId: string, toPhaseId: string, newOrder: number) => void;
+  addCrew: (crew: Crew) => void;
+  removeCrew: (id: string) => void;
+  setSelectedStep: (id: string | null) => void;
+  setStepAssignees: (stepId: string, crewIds: string[]) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -31,6 +46,8 @@ export const useAppStore = create<AppState>((set) => ({
   activeBuildId: null,
   isDeepWork: false,
   syncStatus: 'synced',
+  selectedStepId: null,
+  stepAssignees: {},
 
   setBuilds: (builds) => set({
     builds: Object.fromEntries(builds.map(b => [b.id, b])),
@@ -49,4 +66,79 @@ export const useAppStore = create<AppState>((set) => ({
   setActiveBuild: (id) => set({ activeBuildId: id }),
   setDeepWork: (on) => set({ isDeepWork: on }),
   setSyncStatus: (status) => set({ syncStatus: status }),
+
+  addBuild: (build) => set((state) => ({
+    builds: { ...state.builds, [build.id]: build },
+  })),
+  removeBuild: (id) => set((state) => {
+    const { [id]: _, ...rest } = state.builds;
+    return { builds: rest };
+  }),
+  addPhase: (phase) => set((state) => ({
+    phases: { ...state.phases, [phase.id]: phase },
+    phaseOrder: {
+      ...state.phaseOrder,
+      [phase.buildId]: [...(state.phaseOrder[phase.buildId] ?? []), phase.id],
+    },
+  })),
+  removePhase: (id) => set((state) => {
+    const { [id]: removed, ...restPhases } = state.phases;
+    if (!removed) return {};
+    const phaseOrder = { ...state.phaseOrder };
+    if (phaseOrder[removed.buildId]) {
+      phaseOrder[removed.buildId] = phaseOrder[removed.buildId].filter(pid => pid !== id);
+    }
+    return { phases: restPhases, phaseOrder };
+  }),
+  addStep: (step) => set((state) => ({
+    steps: { ...state.steps, [step.id]: step },
+    stepOrder: {
+      ...state.stepOrder,
+      [step.phaseId]: [...(state.stepOrder[step.phaseId] ?? []), step.id],
+    },
+  })),
+  updateStep: (id, changes) => set((state) => ({
+    steps: {
+      ...state.steps,
+      [id]: { ...state.steps[id], ...changes },
+    },
+  })),
+  removeStep: (id) => set((state) => {
+    const { [id]: removed, ...restSteps } = state.steps;
+    if (!removed) return {};
+    const stepOrder = { ...state.stepOrder };
+    if (stepOrder[removed.phaseId]) {
+      stepOrder[removed.phaseId] = stepOrder[removed.phaseId].filter(sid => sid !== id);
+    }
+    return { steps: restSteps, stepOrder };
+  }),
+  moveStep: (stepId, fromPhaseId, toPhaseId, newOrder) => set((state) => {
+    const fromOrder = [...(state.stepOrder[fromPhaseId] ?? [])].filter(id => id !== stepId);
+    const toOrder = fromPhaseId === toPhaseId
+      ? fromOrder
+      : [...(state.stepOrder[toPhaseId] ?? [])];
+    toOrder.splice(newOrder, 0, stepId);
+    return {
+      steps: {
+        ...state.steps,
+        [stepId]: { ...state.steps[stepId], phaseId: toPhaseId, order: newOrder },
+      },
+      stepOrder: {
+        ...state.stepOrder,
+        [fromPhaseId]: fromOrder,
+        [toPhaseId]: toOrder,
+      },
+    };
+  }),
+  addCrew: (crew) => set((state) => ({
+    crews: { ...state.crews, [crew.id]: crew },
+  })),
+  removeCrew: (id) => set((state) => {
+    const { [id]: _, ...rest } = state.crews;
+    return { crews: rest };
+  }),
+  setSelectedStep: (id) => set({ selectedStepId: id }),
+  setStepAssignees: (stepId, crewIds) => set((state) => ({
+    stepAssignees: { ...state.stepAssignees, [stepId]: crewIds },
+  })),
 }));
