@@ -1,0 +1,5 @@
+allowBuilds:
+  core-js-pure: true
+  electron: true
+  electron-winstaller: true
+  sharp: true

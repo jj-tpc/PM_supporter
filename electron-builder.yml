@@ -1,0 +1,12 @@
+appId: com.pm-supporter.app
+productName: PM Supporter
+copyright: Copyright © 2026 jj-tpc
+directories:
+  output: dist
+  buildResources: resources
+files:
+  - from: .
+    filter:
+      - package.json
+      - app
+publish: null
