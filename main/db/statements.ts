@@ -74,6 +74,34 @@ export function createStatements(db: Database.Database) {
          token_expiry=excluded.token_expiry, calendars_synced=excluded.calendars_synced`
     ),
     deleteGoogleAccount: db.prepare('DELETE FROM google_accounts WHERE id = ?'),
+
+    // Dashboard queries
+    todaySteps: db.prepare(
+      `SELECT s.*, b.name as build_name FROM steps s
+       JOIN builds b ON s.build_id = b.id
+       WHERE s.due_date IS NOT NULL
+       AND date(s.due_date) = date('now')
+       ORDER BY s.priority DESC, s."order"`
+    ),
+    crewWorkload: db.prepare(
+      `SELECT
+         c.id as crew_id, c.name as crew_name,
+         COUNT(sa.step_id) as total,
+         SUM(CASE WHEN p.name = 'Done' OR p.name = '완료' THEN 1 ELSE 0 END) as done,
+         SUM(CASE WHEN p.name = 'In Progress' OR p.name = '진행 중' THEN 1 ELSE 0 END) as in_progress,
+         SUM(CASE WHEN s.due_date IS NOT NULL AND s.due_date < datetime('now') AND p.name != 'Done' AND p.name != '완료' THEN 1 ELSE 0 END) as overdue
+       FROM crews c
+       LEFT JOIN step_assignees sa ON c.id = sa.crew_id
+       LEFT JOIN steps s ON sa.step_id = s.id
+       LEFT JOIN phases p ON s.phase_id = p.id
+       GROUP BY c.id
+       ORDER BY c.name`
+    ),
+    countBuilds: db.prepare('SELECT COUNT(*) as cnt FROM builds'),
+    countCrews: db.prepare('SELECT COUNT(*) as cnt FROM crews'),
+    countSteps: db.prepare('SELECT COUNT(*) as cnt FROM steps'),
+    countDeepWorkSessions: db.prepare('SELECT COUNT(*) as cnt FROM deep_work_sessions'),
+    countPlannerSessions: db.prepare('SELECT COUNT(*) as cnt FROM planner_sessions'),
   } as const;
 }
 

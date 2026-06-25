@@ -190,3 +190,22 @@ export interface DateRange {
   start: string;
   end: string;
 }
+
+/** 온보딩 체크리스트 상태 */
+export interface OnboardingState {
+  buildCreated: boolean;
+  crewAdded: boolean;
+  stepCreated: boolean;
+  googleConnected: boolean;
+  deepWorkTried: boolean;
+  aiUsed: boolean;
+  completedAt: string | null;
+}
+
+/** 대시보드 데이터 */
+export interface DashboardData {
+  todayEvents: CalendarEvent[];
+  todaySteps: Array<{ step: Step; buildName: string }>;
+  crewWorkload: Array<{ crewId: string; crewName: string; total: number; done: number; inProgress: number; overdue: number }>;
+  onboarding: OnboardingState;
+}

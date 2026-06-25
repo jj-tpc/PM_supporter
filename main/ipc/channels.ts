@@ -4,6 +4,7 @@ import type {
   Build, Phase, Step, Crew, Label,
   ChecklistItem, DeletedItem, DeepWorkSession,
   AppSettings, CalendarEvent, GoogleAccount, DateRange,
+  DashboardData, OnboardingState,
 } from '../../shared/types';
 
 export interface IpcChannels {
@@ -71,6 +72,11 @@ export interface IpcChannels {
   'calendar:deleteEvent': { args: [string]; return: void };
   'calendar:sync': { args: []; return: { added: number; updated: number; deleted: number } };
   'calendar:getSyncStatus': { args: []; return: { lastSynced: string | null; status: 'idle' | 'syncing' | 'error' } };
+
+  // === Dashboard ===
+  'dashboard:getData': { args: []; return: DashboardData };
+  'dashboard:getOnboarding': { args: []; return: OnboardingState };
+  'dashboard:dismissOnboarding': { args: []; return: void };
 }
 
 export type IpcChannel = keyof IpcChannels;
