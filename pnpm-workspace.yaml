@@ -1,5 +1,7 @@
 allowBuilds:
+  better-sqlite3: true
   core-js-pure: true
   electron: true
   electron-winstaller: true
+  esbuild: true
   sharp: true
