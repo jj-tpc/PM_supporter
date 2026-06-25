@@ -2,6 +2,8 @@ import { type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAppStore } from '../../stores/app-store';
+import { FloatingCard } from '../ai/FloatingCard';
+import { useAiChat } from '../../hooks/use-ai-chat';
 
 interface ShellProps {
   children: ReactNode;
@@ -12,6 +14,7 @@ export function Shell({ children }: ShellProps) {
   const syncStatus = useAppStore((s) => s.syncStatus);
   const setDeepWork = useAppStore((s) => s.setDeepWork);
   const router = useRouter();
+  const { isOpen: aiOpen, open: openAi } = useAiChat();
 
   const navItems = [
     { href: '/home', label: '홈' },
@@ -54,12 +57,16 @@ export function Shell({ children }: ShellProps) {
       </main>
 
       <button
-        className="fixed bottom-6 left-6 w-12 h-12 bg-accent hover:bg-accent-hover text-surface-raised rounded-xl flex items-center justify-center shadow-lg transition-colors z-50"
+        onClick={openAi}
+        className={`fixed bottom-6 left-6 w-12 h-12 ${
+          aiOpen ? 'bg-accent-hover' : 'bg-accent hover:bg-accent-hover'
+        } text-surface-raised rounded-xl flex items-center justify-center shadow-lg transition-colors z-50`}
         style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }}
         title="AI"
       >
         AI
       </button>
+      <FloatingCard />
 
       <button
         onClick={() => setDeepWork(!isDeepWork)}
