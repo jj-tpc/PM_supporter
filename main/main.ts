@@ -67,6 +67,9 @@ async function bootstrap() {
   // 4. Register IPC handlers
   registerIpcHandlers({ db, stmts, trash, bus, googleAuth, calendarSync });
 
+  const { registerCrossLinks } = await import('./events/cross-links');
+  registerCrossLinks(db, stmts, bus);
+
   // Background sync on startup
   calendarSync.sync().catch((err) => console.error('[CalendarSync] Initial sync failed:', err));
 
