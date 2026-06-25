@@ -8,7 +8,7 @@ import type { CalendarViewType } from '../../../shared/types';
 
 export function CalendarView() {
   const { events, view, dateStr, setView, navigate, googleConnected, connectGoogle, syncNow } = useCalendar();
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [_selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const viewLabel = () => {
     const d = new Date(dateStr);

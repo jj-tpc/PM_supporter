@@ -18,7 +18,7 @@ export function Shell({ children }: ShellProps) {
   const setDeepWork = useAppStore((s) => s.setDeepWork);
   const router = useRouter();
   const { isOpen: aiOpen, open: openAi } = useAiChat();
-  const { isActive, exit, splitView, splitTarget, closeSplitView, openSplitView } = useDeepWork();
+  const { exit, splitView, splitTarget, closeSplitView, openSplitView } = useDeepWork();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

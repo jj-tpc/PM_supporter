@@ -1,11 +1,10 @@
 // main/google/calendar-api.ts
 import { google, type calendar_v3 } from 'googleapis';
-import type { OAuth2Client } from 'google-auth-library';
 
 export class CalendarAPI {
   private calendar: calendar_v3.Calendar;
 
-  constructor(auth: OAuth2Client) {
+  constructor(auth: InstanceType<typeof google.auth.OAuth2>) {
     this.calendar = google.calendar({ version: 'v3', auth });
   }
 

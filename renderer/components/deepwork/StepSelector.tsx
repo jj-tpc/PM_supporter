@@ -1,7 +1,6 @@
 // renderer/components/deepwork/StepSelector.tsx
 import { memo, useMemo } from 'react';
 import { useAppStore } from '../../stores/app-store';
-import type { Step } from '../../../shared/types';
 
 interface Props {
   onSelect: (stepId: string) => void;

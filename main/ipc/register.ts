@@ -7,7 +7,7 @@ import type { EventBus } from '../events/bus';
 import type { GoogleAuth } from '../google/auth';
 import type { CalendarSync } from '../google/calendar-sync';
 import type {
-  Build, Phase, Step, Crew, DeletedItem, DeepWorkSession,
+  Build, Phase, Step, Crew, DeletedItem, DeepWorkSession, CalendarEvent,
 } from '../../shared/types';
 import Database from 'better-sqlite3';
 
@@ -269,7 +269,7 @@ export function registerIpcHandlers({ db, stmts, trash, bus, googleAuth, calenda
     const today = new Date().toISOString().split('T')[0];
     const dayStart = `${today}T00:00:00Z`;
     const dayEnd = `${today}T23:59:59Z`;
-    const todayEvents = stmts.getEventsByRange.all(dayEnd, dayStart);
+    const todayEvents = stmts.getEventsByRange.all(dayEnd, dayStart) as CalendarEvent[];
 
     const todayStepsRaw = stmts.todaySteps.all() as any[];
     const todaySteps = todayStepsRaw.map((row: any) => ({
