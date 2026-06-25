@@ -102,6 +102,22 @@ export function createStatements(db: Database.Database) {
     countSteps: db.prepare('SELECT COUNT(*) as cnt FROM steps'),
     countDeepWorkSessions: db.prepare('SELECT COUNT(*) as cnt FROM deep_work_sessions'),
     countPlannerSessions: db.prepare('SELECT COUNT(*) as cnt FROM planner_sessions'),
+
+    // Planner sessions & messages
+    listPlannerSessions: db.prepare('SELECT * FROM planner_sessions ORDER BY updated_at DESC'),
+    getPlannerSession: db.prepare('SELECT * FROM planner_sessions WHERE id = ?'),
+    insertPlannerSession: db.prepare(
+      'INSERT INTO planner_sessions (id, build_id, title, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+    ),
+    updatePlannerSession: db.prepare(
+      'UPDATE planner_sessions SET title = ?, updated_at = ? WHERE id = ?'
+    ),
+    listPlannerMessages: db.prepare(
+      'SELECT * FROM planner_messages WHERE session_id = ? ORDER BY created_at'
+    ),
+    insertPlannerMessage: db.prepare(
+      'INSERT INTO planner_messages (id, session_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)'
+    ),
   } as const;
 }
 

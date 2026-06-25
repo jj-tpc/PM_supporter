@@ -209,3 +209,40 @@ export interface DashboardData {
   crewWorkload: Array<{ crewId: string; crewName: string; total: number; done: number; inProgress: number; overdue: number }>;
   onboarding: OnboardingState;
 }
+
+/** AI 채팅 메시지 */
+export interface PlannerMessage {
+  id: string;
+  sessionId: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  createdAt: string;
+}
+
+/** AI 채팅 세션 */
+export interface PlannerSession {
+  id: string;
+  buildId: string | null;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** AI 구조화 출력: 로드맵 */
+export interface AIRoadmap {
+  phases: AIRoadmapPhase[];
+}
+
+export interface AIRoadmapPhase {
+  name: string;
+  durationWeeks?: number;
+  steps: AIRoadmapStep[];
+}
+
+export interface AIRoadmapStep {
+  title: string;
+  description: string;
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  estimatedHours?: number;
+  suggestedRole?: string;
+}

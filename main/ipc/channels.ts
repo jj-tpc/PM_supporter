@@ -5,6 +5,7 @@ import type {
   ChecklistItem, DeletedItem, DeepWorkSession,
   AppSettings, CalendarEvent, GoogleAccount, DateRange,
   DashboardData, OnboardingState,
+  PlannerSession, PlannerMessage,
 } from '../../shared/types';
 
 export interface IpcChannels {
@@ -77,6 +78,13 @@ export interface IpcChannels {
   'dashboard:getData': { args: []; return: DashboardData };
   'dashboard:getOnboarding': { args: []; return: OnboardingState };
   'dashboard:dismissOnboarding': { args: []; return: void };
+
+  // === AI Chat ===
+  'ai:createSession': { args: [{ buildId?: string; title: string }]; return: PlannerSession };
+  'ai:listSessions': { args: []; return: PlannerSession[] };
+  'ai:getMessages': { args: [string]; return: PlannerMessage[] };
+  'ai:sendMessage': { args: [{ sessionId: string; content: string }]; return: void };
+  'ai:getApiKeyStatus': { args: []; return: { configured: boolean } };
 }
 
 export type IpcChannel = keyof IpcChannels;
