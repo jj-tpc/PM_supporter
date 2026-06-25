@@ -22,6 +22,14 @@ interface AppState {
   aiMessages: PlannerMessage[];
   aiStreaming: boolean;
   aiStreamBuffer: string;
+  deepWorkStepId: string | null;
+  deepWorkSessionId: string | null;
+  deepWorkTimerSeconds: number;
+  deepWorkTimerRunning: boolean;
+  deepWorkTimerTotal: number;
+  deepWorkShowGuide: boolean;
+  deepWorkSplitView: boolean;
+  deepWorkSplitTarget: 'kanban' | 'calendar' | null;
 
   setBuilds: (builds: Build[]) => void;
   setPhases: (buildId: string, phases: Phase[]) => void;
@@ -54,6 +62,16 @@ interface AppState {
   setAiStreaming: (streaming: boolean) => void;
   appendAiStreamBuffer: (chunk: string) => void;
   clearAiStreamBuffer: () => void;
+  setDeepWorkStepId: (id: string | null) => void;
+  setDeepWorkSessionId: (id: string | null) => void;
+  setDeepWorkTimer: (seconds: number) => void;
+  setDeepWorkTimerRunning: (running: boolean) => void;
+  setDeepWorkTimerTotal: (total: number) => void;
+  setDeepWorkShowGuide: (show: boolean) => void;
+  setDeepWorkSplitView: (open: boolean) => void;
+  setDeepWorkSplitTarget: (target: 'kanban' | 'calendar' | null) => void;
+  tickTimer: () => void;
+  resetTimer: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -77,6 +95,14 @@ export const useAppStore = create<AppState>((set) => ({
   aiMessages: [],
   aiStreaming: false,
   aiStreamBuffer: '',
+  deepWorkStepId: null,
+  deepWorkSessionId: null,
+  deepWorkTimerSeconds: 1500,
+  deepWorkTimerRunning: false,
+  deepWorkTimerTotal: 1500,
+  deepWorkShowGuide: true,
+  deepWorkSplitView: false,
+  deepWorkSplitTarget: null,
 
   setBuilds: (builds) => set({
     builds: Object.fromEntries(builds.map(b => [b.id, b])),
@@ -187,4 +213,18 @@ export const useAppStore = create<AppState>((set) => ({
     aiStreamBuffer: state.aiStreamBuffer + chunk,
   })),
   clearAiStreamBuffer: () => set({ aiStreamBuffer: '' }),
+  setDeepWorkStepId: (id) => set({ deepWorkStepId: id }),
+  setDeepWorkSessionId: (id) => set({ deepWorkSessionId: id }),
+  setDeepWorkTimer: (seconds) => set({ deepWorkTimerSeconds: seconds }),
+  setDeepWorkTimerRunning: (running) => set({ deepWorkTimerRunning: running }),
+  setDeepWorkTimerTotal: (total) => set({ deepWorkTimerTotal: total }),
+  setDeepWorkShowGuide: (show) => set({ deepWorkShowGuide: show }),
+  setDeepWorkSplitView: (open) => set({ deepWorkSplitView: open }),
+  setDeepWorkSplitTarget: (target) => set({ deepWorkSplitTarget: target }),
+  tickTimer: () => set((state) => ({
+    deepWorkTimerSeconds: Math.max(0, state.deepWorkTimerSeconds - 1),
+  })),
+  resetTimer: () => set((state) => ({
+    deepWorkTimerSeconds: state.deepWorkTimerTotal,
+  })),
 }));
