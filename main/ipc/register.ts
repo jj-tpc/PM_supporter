@@ -4,6 +4,8 @@ import type { IpcChannels, IpcChannel } from './channels';
 import type { Statements } from '../db/statements';
 import type { TrashService } from '../db/trash';
 import type { EventBus } from '../events/bus';
+import type { GoogleAuth } from '../google/auth';
+import type { CalendarSync } from '../google/calendar-sync';
 import type {
   Build, Phase, Step, Crew, DeletedItem, DeepWorkSession,
 } from '../../shared/types';
@@ -14,12 +16,14 @@ interface RegisterDeps {
   stmts: Statements;
   trash: TrashService;
   bus: EventBus;
+  googleAuth: GoogleAuth;
+  calendarSync: CalendarSync;
 }
 
-export function registerIpcHandlers({ db, stmts, trash, bus }: RegisterDeps): void {
+export function registerIpcHandlers({ db, stmts, trash, bus, googleAuth, calendarSync }: RegisterDeps): void {
   function handle<C extends IpcChannel>(
     channel: C,
-    handler: (...args: IpcChannels[C]['args']) => IpcChannels[C]['return']
+    handler: (...args: IpcChannels[C]['args']) => IpcChannels[C]['return'] | Promise<IpcChannels[C]['return']>
   ) {
     ipcMain.handle(channel, (_event: Electron.IpcMainInvokeEvent, ...args: unknown[]) =>
       handler(...(args as IpcChannels[C]['args']))
@@ -192,5 +196,70 @@ export function registerIpcHandlers({ db, stmts, trash, bus }: RegisterDeps): vo
   });
   handle('deepwork:updateContext', (sessionId, contextNote) => {
     db.prepare('UPDATE deep_work_sessions SET context_note = ? WHERE id = ?').run(contextNote, sessionId);
+  });
+
+  // === Google Auth ===
+  handle('google:startAuth', async () => {
+    const result = await googleAuth.startAuth();
+    return stmts.getGoogleAccount.get(result.id) as any;
+  });
+  handle('google:getAccounts', () => googleAuth.getAccounts() as any);
+  handle('google:removeAccount', (id) => googleAuth.removeAccount(id));
+
+  // === Calendar ===
+  handle('calendar:getEvents', (range) => {
+    return calendarSync.getEventsByRange(range.start, range.end) as any;
+  });
+  handle('calendar:sync', async () => {
+    return calendarSync.sync();
+  });
+  handle('calendar:getSyncStatus', () => {
+    return calendarSync.getStatus();
+  });
+  handle('calendar:createEvent', async (data) => {
+    const accounts = googleAuth.getAccounts() as any[];
+    if (accounts.length === 0) throw new Error('No Google account connected');
+    const client = googleAuth.getClient(accounts[0].id);
+    const { CalendarAPI } = await import('../google/calendar-api');
+    const api = new CalendarAPI(client);
+    const event = await api.createEvent(data.calendarId || 'primary', {
+      summary: data.summary,
+      start: { dateTime: data.startTime },
+      end: { dateTime: data.endTime },
+      description: data.description,
+      location: data.location,
+    });
+    await calendarSync.sync();
+    return stmts.getEvent.get(event.id!) as any;
+  });
+  handle('calendar:updateEvent', async (eventId, changes) => {
+    const cached = stmts.getEvent.get(eventId) as any;
+    if (!cached) throw new Error(`Event not found: ${eventId}`);
+    const accounts = googleAuth.getAccounts() as any[];
+    if (accounts.length === 0) throw new Error('No Google account connected');
+    const client = googleAuth.getClient(cached.account_id);
+    const { CalendarAPI } = await import('../google/calendar-api');
+    const api = new CalendarAPI(client);
+    const patch: any = {};
+    if (changes.summary !== undefined) patch.summary = changes.summary;
+    if (changes.startTime !== undefined) patch.start = { dateTime: changes.startTime };
+    if (changes.endTime !== undefined) patch.end = { dateTime: changes.endTime };
+    if (changes.description !== undefined) patch.description = changes.description;
+    if (changes.location !== undefined) patch.location = changes.location;
+    await api.updateEvent(cached.calendar_id, eventId, patch);
+    await calendarSync.sync();
+    return stmts.getEvent.get(eventId) as any;
+  });
+  handle('calendar:deleteEvent', async (eventId) => {
+    const cached = stmts.getEvent.get(eventId) as any;
+    if (!cached) throw new Error(`Event not found: ${eventId}`);
+    const accounts = googleAuth.getAccounts() as any[];
+    if (accounts.length === 0) throw new Error('No Google account connected');
+    const client = googleAuth.getClient(cached.account_id);
+    const { CalendarAPI } = await import('../google/calendar-api');
+    const api = new CalendarAPI(client);
+    await api.deleteEvent(cached.calendar_id, eventId);
+    stmts.deleteEvent.run(eventId);
+    bus.emit('calendar:changed', { eventId, type: 'deleted' });
   });
 }

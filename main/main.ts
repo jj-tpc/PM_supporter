@@ -59,8 +59,16 @@ async function bootstrap() {
   const trash = new TrashService(db, stmts);
   const bus = new EventBus();
 
+  const { GoogleAuth } = await import('./google/auth');
+  const { CalendarSync } = await import('./google/calendar-sync');
+  const googleAuth = new GoogleAuth(db, stmts);
+  const calendarSync = new CalendarSync(db, stmts, googleAuth, bus);
+
   // 4. Register IPC handlers
-  registerIpcHandlers({ db, stmts, trash, bus });
+  registerIpcHandlers({ db, stmts, trash, bus, googleAuth, calendarSync });
+
+  // Background sync on startup
+  calendarSync.sync().catch((err) => console.error('[CalendarSync] Initial sync failed:', err));
 
   // 5. Load page (keep Nextron's URL pattern)
   if (isProd) {
