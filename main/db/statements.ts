@@ -44,6 +44,36 @@ export function createStatements(db: Database.Database) {
     removeDeletedItem: db.prepare('DELETE FROM deleted_items WHERE id = ?'),
     purgeExpired: db.prepare('DELETE FROM deleted_items WHERE expires_at < ?'),
     getDeletedByBatch: db.prepare('SELECT * FROM deleted_items WHERE batch_id = ?'),
+
+    // Calendar cache
+    getEventsByRange: db.prepare(
+      'SELECT * FROM calendar_events_cache WHERE start_time < ? AND end_time > ? ORDER BY start_time'
+    ),
+    getEvent: db.prepare('SELECT * FROM calendar_events_cache WHERE id = ?'),
+    upsertEvent: db.prepare(
+      `INSERT INTO calendar_events_cache (id, account_id, calendar_id, summary, description, start_time, end_time, location, attendees, recurrence, raw_data, synced_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         summary=excluded.summary, description=excluded.description,
+         start_time=excluded.start_time, end_time=excluded.end_time,
+         location=excluded.location, attendees=excluded.attendees,
+         recurrence=excluded.recurrence, raw_data=excluded.raw_data,
+         synced_at=excluded.synced_at`
+    ),
+    deleteEvent: db.prepare('DELETE FROM calendar_events_cache WHERE id = ?'),
+    deleteEventsByAccount: db.prepare('DELETE FROM calendar_events_cache WHERE account_id = ?'),
+
+    // Google accounts
+    getGoogleAccount: db.prepare('SELECT * FROM google_accounts WHERE id = ?'),
+    listGoogleAccounts: db.prepare('SELECT * FROM google_accounts'),
+    upsertGoogleAccount: db.prepare(
+      `INSERT INTO google_accounts (id, email, access_token, refresh_token, token_expiry, calendars_synced)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         access_token=excluded.access_token, refresh_token=excluded.refresh_token,
+         token_expiry=excluded.token_expiry, calendars_synced=excluded.calendars_synced`
+    ),
+    deleteGoogleAccount: db.prepare('DELETE FROM google_accounts WHERE id = ?'),
   } as const;
 }
 

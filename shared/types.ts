@@ -155,3 +155,38 @@ export interface AppSettings {
     infoEnabled: boolean;
   };
 }
+
+/** Google Calendar 이벤트 (로컬 캐시 형태) */
+export interface CalendarEvent {
+  id: string;
+  accountId: string;
+  calendarId: string;
+  summary: string;
+  description: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  attendees: string;
+  recurrence: string;
+  rawData: string;
+  syncedAt: string;
+}
+
+/** Google 계정 */
+export interface GoogleAccount {
+  id: string;
+  email: string;
+  accessToken: string;
+  refreshToken: string;
+  tokenExpiry: string;
+  calendarsSynced: string | null;
+}
+
+/** 캘린더 뷰 타입 */
+export type CalendarViewType = 'day' | 'week' | 'month';
+
+/** 캘린더 뷰 날짜 범위 */
+export interface DateRange {
+  start: string;
+  end: string;
+}

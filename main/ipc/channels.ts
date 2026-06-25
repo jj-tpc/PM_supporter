@@ -3,7 +3,7 @@
 import type {
   Build, Phase, Step, Crew, Label,
   ChecklistItem, DeletedItem, DeepWorkSession,
-  AppSettings,
+  AppSettings, CalendarEvent, GoogleAccount, DateRange,
 } from '../../shared/types';
 
 export interface IpcChannels {
@@ -58,6 +58,19 @@ export interface IpcChannels {
 
   'app:getSettings': { args: []; return: AppSettings };
   'app:updateSettings': { args: [Partial<AppSettings>]; return: void };
+
+  // === Google Auth ===
+  'google:startAuth': { args: []; return: GoogleAccount };
+  'google:getAccounts': { args: []; return: GoogleAccount[] };
+  'google:removeAccount': { args: [string]; return: void };
+
+  // === Calendar ===
+  'calendar:getEvents': { args: [DateRange]; return: CalendarEvent[] };
+  'calendar:createEvent': { args: [{ calendarId: string; summary: string; startTime: string; endTime: string; description?: string; location?: string }]; return: CalendarEvent };
+  'calendar:updateEvent': { args: [string, Partial<{ summary: string; startTime: string; endTime: string; description: string; location: string }>]; return: CalendarEvent };
+  'calendar:deleteEvent': { args: [string]; return: void };
+  'calendar:sync': { args: []; return: { added: number; updated: number; deleted: number } };
+  'calendar:getSyncStatus': { args: []; return: { lastSynced: string | null; status: 'idle' | 'syncing' | 'error' } };
 }
 
 export type IpcChannel = keyof IpcChannels;
