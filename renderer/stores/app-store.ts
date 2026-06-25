@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Build, Phase, Step, Crew, CalendarEvent, CalendarViewType } from '../../shared/types';
+import type { Build, Phase, Step, Crew, CalendarEvent, CalendarViewType, PlannerMessage } from '../../shared/types';
 
 interface AppState {
   builds: Record<string, Build>;
@@ -17,6 +17,11 @@ interface AppState {
   calendarView: CalendarViewType;
   calendarDate: string;
   googleConnected: boolean;
+  aiCardOpen: boolean;
+  aiSessionId: string | null;
+  aiMessages: PlannerMessage[];
+  aiStreaming: boolean;
+  aiStreamBuffer: string;
 
   setBuilds: (builds: Build[]) => void;
   setPhases: (buildId: string, phases: Phase[]) => void;
@@ -42,6 +47,13 @@ interface AppState {
   setCalendarView: (view: CalendarViewType) => void;
   setCalendarDate: (date: string) => void;
   setGoogleConnected: (connected: boolean) => void;
+  setAiCardOpen: (open: boolean) => void;
+  setAiSessionId: (id: string | null) => void;
+  setAiMessages: (messages: PlannerMessage[]) => void;
+  addAiMessage: (message: PlannerMessage) => void;
+  setAiStreaming: (streaming: boolean) => void;
+  appendAiStreamBuffer: (chunk: string) => void;
+  clearAiStreamBuffer: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -60,6 +72,11 @@ export const useAppStore = create<AppState>((set) => ({
   calendarView: 'month',
   calendarDate: new Date().toISOString(),
   googleConnected: false,
+  aiCardOpen: false,
+  aiSessionId: null,
+  aiMessages: [],
+  aiStreaming: false,
+  aiStreamBuffer: '',
 
   setBuilds: (builds) => set({
     builds: Object.fromEntries(builds.map(b => [b.id, b])),
@@ -159,4 +176,15 @@ export const useAppStore = create<AppState>((set) => ({
   setCalendarView: (view) => set({ calendarView: view }),
   setCalendarDate: (date) => set({ calendarDate: date }),
   setGoogleConnected: (connected) => set({ googleConnected: connected }),
+  setAiCardOpen: (open) => set({ aiCardOpen: open }),
+  setAiSessionId: (id) => set({ aiSessionId: id }),
+  setAiMessages: (messages) => set({ aiMessages: messages }),
+  addAiMessage: (message) => set((state) => ({
+    aiMessages: [...state.aiMessages, message],
+  })),
+  setAiStreaming: (streaming) => set({ aiStreaming: streaming }),
+  appendAiStreamBuffer: (chunk) => set((state) => ({
+    aiStreamBuffer: state.aiStreamBuffer + chunk,
+  })),
+  clearAiStreamBuffer: () => set({ aiStreamBuffer: '' }),
 }));
