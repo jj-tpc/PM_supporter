@@ -1,20 +1,18 @@
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron';
 
-const handler = {
-  send<T>(channel: string, value?: T) {
-    ipcRenderer.send(channel, value)
+const api = new Proxy({} as Record<string, (...args: any[]) => Promise<any>>, {
+  get(_target, channel: string) {
+    return (...args: any[]) => ipcRenderer.invoke(channel, ...args);
   },
-  on<T>(channel: string, callback: (...args: T[]) => void) {
-    const subscription = (_event: IpcRendererEvent, ...args: T[]) =>
-      callback(...args)
-    ipcRenderer.on(channel, subscription)
+});
 
-    return () => {
-      ipcRenderer.removeListener(channel, subscription)
-    }
+const events = {
+  on: (channel: string, callback: (...args: any[]) => void) => {
+    const listener = (_event: any, ...args: any[]) => callback(...args);
+    ipcRenderer.on(channel, listener);
+    return () => ipcRenderer.removeListener(channel, listener);
   },
-}
+};
 
-contextBridge.exposeInMainWorld('ipc', handler)
-
-export type IpcHandler = typeof handler
+contextBridge.exposeInMainWorld('api', api);
+contextBridge.exposeInMainWorld('events', events);
