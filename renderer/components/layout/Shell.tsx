@@ -1,9 +1,12 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAppStore } from '../../stores/app-store';
 import { FloatingCard } from '../ai/FloatingCard';
 import { useAiChat } from '../../hooks/use-ai-chat';
+import { DeepWorkView } from '../deepwork/DeepWorkView';
+import { SplitViewPanel } from '../deepwork/SplitViewPanel';
+import { useDeepWork } from '../../hooks/use-deep-work';
 
 interface ShellProps {
   children: ReactNode;
@@ -15,6 +18,21 @@ export function Shell({ children }: ShellProps) {
   const setDeepWork = useAppStore((s) => s.setDeepWork);
   const router = useRouter();
   const { isOpen: aiOpen, open: openAi } = useAiChat();
+  const { isActive, exit, splitView, splitTarget, closeSplitView, openSplitView } = useDeepWork();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isDeepWork) {
+        if (splitView) {
+          closeSplitView();
+        } else {
+          exit();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDeepWork, splitView, closeSplitView, exit]);
 
   const navItems = [
     { href: '/home', label: '홈' },
@@ -52,9 +70,20 @@ export function Shell({ children }: ShellProps) {
         </nav>
       )}
 
-      <main className="flex-1 bg-surface overflow-auto">
-        {children}
-      </main>
+      {isDeepWork ? (
+        <div className="flex flex-1">
+          <div className="flex-1">
+            <DeepWorkView />
+          </div>
+          {splitView && splitTarget && (
+            <SplitViewPanel target={splitTarget} onClose={closeSplitView} />
+          )}
+        </div>
+      ) : (
+        <main className="flex-1 bg-surface overflow-auto">
+          {children}
+        </main>
+      )}
 
       <button
         onClick={openAi}
@@ -69,11 +98,30 @@ export function Shell({ children }: ShellProps) {
       <FloatingCard />
 
       <button
-        onClick={() => setDeepWork(!isDeepWork)}
+        onClick={() => {
+          if (isDeepWork) {
+            exit();
+          } else {
+            setDeepWork(true);
+          }
+        }}
         className="fixed top-4 right-4 px-3 py-1.5 text-sm rounded-full border border-border text-text-secondary hover:text-text-primary hover:border-accent transition-colors z-50"
       >
         {isDeepWork ? '🔴 Deep Work 종료' : '🔘 Deep Work'}
       </button>
+
+      {isDeepWork && (
+        <div className="fixed bottom-6 right-6 flex gap-2 z-50">
+          <button onClick={() => openSplitView('kanban')}
+            className="px-3 py-1.5 text-xs bg-surface-raised border border-border text-text-secondary rounded hover:text-text-primary">
+            칸반
+          </button>
+          <button onClick={() => openSplitView('calendar')}
+            className="px-3 py-1.5 text-xs bg-surface-raised border border-border text-text-secondary rounded hover:text-text-primary">
+            캘린더
+          </button>
+        </div>
+      )}
     </div>
   );
 }
