@@ -1,4 +1,6 @@
 import { type ReactNode } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useAppStore } from '../../stores/app-store';
 
 interface ShellProps {
@@ -9,6 +11,13 @@ export function Shell({ children }: ShellProps) {
   const isDeepWork = useAppStore((s) => s.isDeepWork);
   const syncStatus = useAppStore((s) => s.syncStatus);
   const setDeepWork = useAppStore((s) => s.setDeepWork);
+  const router = useRouter();
+
+  const navItems = [
+    { href: '/home', label: '홈' },
+    { href: '/builds', label: '빌드' },
+    { href: '/calendar', label: '캘린더' },
+  ];
 
   return (
     <div data-mode={isDeepWork ? 'deepwork' : 'normal'} className="flex h-screen">
@@ -16,9 +25,20 @@ export function Shell({ children }: ShellProps) {
         <nav className="w-56 border-r border-border bg-surface-raised flex flex-col p-4">
           <h1 className="text-lg font-semibold text-text-primary mb-6">PM Supporter</h1>
           <ul className="space-y-2 flex-1">
-            <li className="text-text-secondary hover:text-text-primary cursor-pointer">홈</li>
-            <li className="text-text-secondary hover:text-text-primary cursor-pointer">빌드</li>
-            <li className="text-text-secondary hover:text-text-primary cursor-pointer">캘린더</li>
+            {navItems.map(item => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={`block px-2 py-1.5 rounded text-sm ${
+                    router.pathname.startsWith(item.href)
+                      ? 'text-text-primary bg-surface font-medium'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ))}
           </ul>
           <div className="text-xs text-text-secondary">
             {syncStatus === 'synced' && '🟢 동기화됨'}
