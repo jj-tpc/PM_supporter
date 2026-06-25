@@ -39,3 +39,12 @@ next-env.d.ts
 # nextron / electron
 /app
 /dist
+
+# SQLite databases
+*.db
+
+# pnpm store
+.pnpm-store/
+
+# native module build artifacts
+/build/Release
