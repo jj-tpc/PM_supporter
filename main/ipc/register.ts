@@ -90,6 +90,33 @@ export function registerIpcHandlers({ db, stmts, trash, bus }: RegisterDeps): vo
     stmts.moveStep.run(targetPhaseId, order, now(), stepId);
     bus.emit('step:moved', { stepId, fromPhase, toPhase: targetPhaseId });
   });
+  handle('step:update', (id, changes) => {
+    const step = stmts.getStep.get(id) as Record<string, unknown> | undefined;
+    if (!step) throw new Error(`Step not found: ${id}`);
+
+    const updatable = ['title', 'description', 'priority', 'due_date'] as const;
+    const setClauses: string[] = [];
+    const values: unknown[] = [];
+
+    for (const [key, value] of Object.entries(changes)) {
+      const snakeKey = key.replace(/[A-Z]/g, l => `_${l.toLowerCase()}`);
+      if ((updatable as readonly string[]).includes(snakeKey)) {
+        setClauses.push(`"${snakeKey}" = ?`);
+        values.push(value);
+      }
+    }
+
+    if (setClauses.length > 0) {
+      setClauses.push('"updated_at" = ?');
+      values.push(now());
+      values.push(id);
+      db.prepare(`UPDATE steps SET ${setClauses.join(', ')} WHERE id = ?`).run(...values);
+    }
+
+    const updated = stmts.getStep.get(id) as Step;
+    bus.emit('step:updated', { stepId: id, changes: changes as Partial<Step> });
+    return updated;
+  });
   handle('step:delete', (id) => {
     trash.softDelete('step', id);
     bus.emit('step:deleted', { stepId: id });
@@ -104,6 +131,24 @@ export function registerIpcHandlers({ db, stmts, trash, bus }: RegisterDeps): vo
   });
   handle('crew:delete', (id) => {
     trash.softDelete('crew', id);
+  });
+
+  // === Step-Crew Assignment ===
+  handle('step:assignCrew', (stepId, crewIds) => {
+    const txn = db.transaction(() => {
+      db.prepare('DELETE FROM step_assignees WHERE step_id = ?').run(stepId);
+      const insert = db.prepare('INSERT INTO step_assignees (step_id, crew_id) VALUES (?, ?)');
+      for (const crewId of crewIds) {
+        insert.run(stepId, crewId);
+      }
+    });
+    txn();
+  });
+
+  handle('step:getAssignees', (stepId) => {
+    return db.prepare('SELECT crew_id FROM step_assignees WHERE step_id = ?')
+      .all(stepId)
+      .map((r: any) => r.crew_id);
   });
 
   // === Trash ===
