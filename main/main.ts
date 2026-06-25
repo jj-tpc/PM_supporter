@@ -65,7 +65,7 @@ async function bootstrap() {
   const calendarSync = new CalendarSync(db, stmts, googleAuth, bus);
 
   // 4. Register IPC handlers
-  registerIpcHandlers({ db, stmts, trash, bus, googleAuth, calendarSync });
+  registerIpcHandlers({ db, stmts, trash, bus, googleAuth, calendarSync, mainWindow });
 
   const { registerCrossLinks } = await import('./events/cross-links');
   registerCrossLinks(db, stmts, bus);

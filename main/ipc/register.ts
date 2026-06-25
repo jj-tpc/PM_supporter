@@ -18,9 +18,10 @@ interface RegisterDeps {
   bus: EventBus;
   googleAuth: GoogleAuth;
   calendarSync: CalendarSync;
+  mainWindow: Electron.BrowserWindow | null;
 }
 
-export function registerIpcHandlers({ db, stmts, trash, bus, googleAuth, calendarSync }: RegisterDeps): void {
+export function registerIpcHandlers({ db, stmts, trash, bus, googleAuth, calendarSync, mainWindow }: RegisterDeps): void {
   function handle<C extends IpcChannel>(
     channel: C,
     handler: (...args: IpcChannels[C]['args']) => IpcChannels[C]['return'] | Promise<IpcChannels[C]['return']>
@@ -311,4 +312,77 @@ export function registerIpcHandlers({ db, stmts, trash, bus, googleAuth, calenda
       aiUsed: plannerCount > 0, completedAt: dismissed?.value ?? null,
     };
   }
+
+  // === AI Chat ===
+  handle('ai:getApiKeyStatus', () => {
+    const { isApiKeyConfigured } = require('../ai/claude-client');
+    return { configured: isApiKeyConfigured() };
+  });
+
+  handle('ai:createSession', ({ buildId, title }) => {
+    const id = uuid();
+    const ts = now();
+    stmts.insertPlannerSession.run(id, buildId ?? null, title, ts, ts);
+    return stmts.getPlannerSession.get(id) as import('../../shared/types').PlannerSession;
+  });
+
+  handle('ai:listSessions', () => stmts.listPlannerSessions.all() as import('../../shared/types').PlannerSession[]);
+
+  handle('ai:getMessages', (sessionId) => stmts.listPlannerMessages.all(sessionId) as import('../../shared/types').PlannerMessage[]);
+
+  handle('ai:sendMessage', async ({ sessionId, content }) => {
+    const msgId = uuid();
+    const ts = now();
+    stmts.insertPlannerMessage.run(msgId, sessionId, 'user', content, ts);
+
+    const history = (stmts.listPlannerMessages.all(sessionId) as any[])
+      .filter((m: any) => m.role !== 'system')
+      .map((m: any) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+    const session = stmts.getPlannerSession.get(sessionId) as any;
+    let contextPrompt = '';
+    if (session?.build_id) {
+      const build = stmts.getBuild.get(session.build_id) as any;
+      const phases = (stmts.listPhases.all(session.build_id) as any[]).map((p: any) => ({
+        name: p.name,
+        stepCount: (stmts.listStepsByPhase.all(p.id) as any[]).length,
+      }));
+      const crews = (stmts.listCrews.all() as any[]).map((c: any) => ({
+        name: c.name, role: c.role ?? '미지정',
+      }));
+      const { buildContextPrompt } = await import('../ai/prompts');
+      contextPrompt = buildContextPrompt({ buildName: build?.name, phases, crewMembers: crews });
+    }
+
+    const { PLANNER_SYSTEM_PROMPT } = await import('../ai/prompts');
+    const { streamChat } = await import('../ai/claude-client');
+
+    let fullResponse = '';
+    try {
+      for await (const chunk of streamChat(PLANNER_SYSTEM_PROMPT + contextPrompt, history)) {
+        fullResponse += chunk;
+        if (mainWindow) {
+          mainWindow.webContents.send('ai:stream', { sessionId, chunk });
+        }
+      }
+    } catch (err: any) {
+      fullResponse = `[AI 오류] ${err.message ?? '응답을 생성할 수 없습니다.'}`;
+      if (mainWindow) {
+        mainWindow.webContents.send('ai:stream', { sessionId, chunk: fullResponse });
+      }
+    }
+
+    const assistantMsgId = uuid();
+    stmts.insertPlannerMessage.run(assistantMsgId, sessionId, 'assistant', fullResponse, now());
+
+    if (mainWindow) {
+      mainWindow.webContents.send('ai:streamEnd', { sessionId });
+    }
+
+    stmts.updatePlannerSession.run(
+      (stmts.getPlannerSession.get(sessionId) as any)?.title ?? 'AI 대화',
+      now(),
+      sessionId
+    );
+  });
 }
