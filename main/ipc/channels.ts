@@ -34,6 +34,7 @@ export interface IpcChannels {
   'crew:delete': { args: [string]; return: void };
 
   'step:assignCrew': { args: [string, string[]]; return: void };
+  'step:getAssignees': { args: [string]; return: string[] };
 
   'label:list': { args: [string]; return: Label[] };
   'label:create': { args: [Omit<Label, 'id'>]; return: Label };
