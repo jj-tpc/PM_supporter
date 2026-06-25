@@ -262,4 +262,53 @@ export function registerIpcHandlers({ db, stmts, trash, bus, googleAuth, calenda
     stmts.deleteEvent.run(eventId);
     bus.emit('calendar:changed', { eventId, type: 'deleted' });
   });
+
+  // === Dashboard ===
+  handle('dashboard:getData', () => {
+    const today = new Date().toISOString().split('T')[0];
+    const dayStart = `${today}T00:00:00Z`;
+    const dayEnd = `${today}T23:59:59Z`;
+    const todayEvents = stmts.getEventsByRange.all(dayEnd, dayStart);
+
+    const todayStepsRaw = stmts.todaySteps.all() as any[];
+    const todaySteps = todayStepsRaw.map((row: any) => ({
+      step: {
+        id: row.id, buildId: row.build_id, phaseId: row.phase_id,
+        title: row.title, description: row.description, priority: row.priority,
+        dueDate: row.due_date, order: row.order, createdBy: row.created_by,
+        createdAt: row.created_at, updatedAt: row.updated_at,
+      },
+      buildName: row.build_name,
+    }));
+
+    const crewWorkload = (stmts.crewWorkload.all() as any[]).map((row: any) => ({
+      crewId: row.crew_id, crewName: row.crew_name,
+      total: row.total ?? 0, done: row.done ?? 0,
+      inProgress: row.in_progress ?? 0, overdue: row.overdue ?? 0,
+    }));
+
+    const onboarding = getOnboardingState();
+    return { todayEvents, todaySteps, crewWorkload, onboarding };
+  });
+
+  handle('dashboard:getOnboarding', () => getOnboardingState());
+
+  handle('dashboard:dismissOnboarding', () => {
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('onboarding_dismissed', ?)").run(now());
+  });
+
+  function getOnboardingState(): import('../../shared/types').OnboardingState {
+    const buildCount = (stmts.countBuilds.get() as any).cnt;
+    const crewCount = (stmts.countCrews.get() as any).cnt;
+    const stepCount = (stmts.countSteps.get() as any).cnt;
+    const googleAccounts = stmts.listGoogleAccounts.all() as any[];
+    const deepWorkCount = (stmts.countDeepWorkSessions.get() as any).cnt;
+    const plannerCount = (stmts.countPlannerSessions.get() as any).cnt;
+    const dismissed = db.prepare("SELECT value FROM app_settings WHERE key = 'onboarding_dismissed'").get() as any;
+    return {
+      buildCreated: buildCount > 0, crewAdded: crewCount > 0, stepCreated: stepCount > 0,
+      googleConnected: googleAccounts.length > 0, deepWorkTried: deepWorkCount > 0,
+      aiUsed: plannerCount > 0, completedAt: dismissed?.value ?? null,
+    };
+  }
 }
