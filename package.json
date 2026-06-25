@@ -17,7 +17,8 @@
     "better-sqlite3": "^12.2.0",
     "electron-serve": "^3.0.0",
     "electron-store": "^11.0.2",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
