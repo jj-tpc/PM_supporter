@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Build, Phase, Step, Crew } from '../../shared/types';
+import type { Build, Phase, Step, Crew, CalendarEvent, CalendarViewType } from '../../shared/types';
 
 interface AppState {
   builds: Record<string, Build>;
@@ -13,6 +13,10 @@ interface AppState {
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
   selectedStepId: string | null;
   stepAssignees: Record<string, string[]>;
+  calendarEvents: Record<string, CalendarEvent>;
+  calendarView: CalendarViewType;
+  calendarDate: string;
+  googleConnected: boolean;
 
   setBuilds: (builds: Build[]) => void;
   setPhases: (buildId: string, phases: Phase[]) => void;
@@ -34,6 +38,10 @@ interface AppState {
   removeCrew: (id: string) => void;
   setSelectedStep: (id: string | null) => void;
   setStepAssignees: (stepId: string, crewIds: string[]) => void;
+  setCalendarEvents: (events: CalendarEvent[]) => void;
+  setCalendarView: (view: CalendarViewType) => void;
+  setCalendarDate: (date: string) => void;
+  setGoogleConnected: (connected: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -48,6 +56,10 @@ export const useAppStore = create<AppState>((set) => ({
   syncStatus: 'synced',
   selectedStepId: null,
   stepAssignees: {},
+  calendarEvents: {},
+  calendarView: 'month',
+  calendarDate: new Date().toISOString(),
+  googleConnected: false,
 
   setBuilds: (builds) => set({
     builds: Object.fromEntries(builds.map(b => [b.id, b])),
@@ -141,4 +153,10 @@ export const useAppStore = create<AppState>((set) => ({
   setStepAssignees: (stepId, crewIds) => set((state) => ({
     stepAssignees: { ...state.stepAssignees, [stepId]: crewIds },
   })),
+  setCalendarEvents: (events) => set({
+    calendarEvents: Object.fromEntries(events.map(e => [e.id, e])),
+  }),
+  setCalendarView: (view) => set({ calendarView: view }),
+  setCalendarDate: (date) => set({ calendarDate: date }),
+  setGoogleConnected: (connected) => set({ googleConnected: connected }),
 }));
